@@ -19,7 +19,7 @@
  * Difficulty: 1
  */
 int bitAnd(int x, int y) {
-    return 2;
+    return ~(~x | ~y);
 }
 
 /*
@@ -30,7 +30,9 @@ int bitAnd(int x, int y) {
  *   Difficulty: 1
  */
 int bitXor(int x, int y) {
-    return 2;
+    // 抽象: 使用与非门构造或门
+    // 异或: 属于两者其中一个，但不属于两者之和
+    return ~(x&y) & ~(~x&~y);
 }
 
 /*
@@ -50,7 +52,23 @@ int bitXor(int x, int y) {
  *   1 if x and y have the same sign , 0 otherwise.
  */
 int samesign(int x, int y) {
-    return 2;
+    // 分类讨论，拆成相互独立情况，不断筛掉                          1
+    if ((x >> 31) ^ (y >> 31))
+    {
+        return 0;
+    }
+
+    if (!x && !y)
+    {
+        return 1;
+    }
+
+    if (!(x && y))
+    {
+        return 0;
+    }
+
+    return 1;
 }
 
 /*
@@ -63,7 +81,31 @@ int samesign(int x, int y) {
  *   Difficulty: 4
  */
 int logtwo(int v) {
-    return 2;
+
+    int b4, b3, b2, b1, b0;
+    int a4, a3, a2, a1;
+
+    // 探测阶有没有达到16
+    b4 = (v >> 16) > 0;
+    v = v >> (a4 = (b4 << 4)); // 若存在，v 右移 16 位. 若不存在则不移动
+
+    // 探测剩余阶有没有达到8
+    b3 = (v >> 8) > 0;
+    v = v >> (a3 = (b3 << 3)); // 若存在，v 右移 8 位. 若不存在则不移动
+
+    // 探测剩余阶有没有达到4 
+    b2 = (v >> 4) > 0;
+    v = v >> (a2 = (b2 << 2)); // 若存在，v 右移 4 位. 若不存在则不移动
+
+    // 探测剩余阶有没有达到2
+    b1 = (v >> 2) > 0;
+    v = v >> (a1 = (b1 << 1)); // 若存在，v 右移 2 位. 若不存在则不移动
+
+    // 探测剩余阶有没有达到1
+    b0 = (v >> 1) > 0;
+
+    // 用或 模拟 二进制转十进制
+    return a4 | a3 | a2 | a1 | b0;
 }
 
 /*
@@ -76,7 +118,17 @@ int logtwo(int v) {
  *    Difficulty: 2
  */
 int byteSwap(int x, int n, int m) {
-    return 2;
+    // 模拟
+    n = n << 3;
+    m = m << 3;
+    int a = (0xFF << n);
+    int b = (0xFF << m);
+    int c = ((x & a) >> n) & 0xFF;
+    c = c << m;
+    int d = ((x & b) >> m) & 0xFF;
+    d = d << n;
+    x = (x & ~(a|b)) | c | d;
+    return x;
 }
 
 /*
@@ -88,7 +140,12 @@ int byteSwap(int x, int n, int m) {
  *   Difficulty: 3
  */
 unsigned reverse(unsigned v) {
-    return 2;
+    v = ((v >> 1) & 0x55555555) | ((v & 0x55555555) << 1);
+    v = ((v >> 2) & 0x33333333) | ((v & 0x33333333) << 2);
+    v = ((v >> 4) & 0x0F0F0F0F) | ((v & 0x0F0F0F0F) << 4);
+    v = ((v >> 8) & 0x00FF00FF) | ((v & 0x00FF00FF) << 8);
+    v = ((v >> 16) & 0x0000FFFF) | ((v & 0x0000FFFF) << 16);
+    return v;
 }
 
 /*
@@ -100,7 +157,11 @@ unsigned reverse(unsigned v) {
  *   Difficulty: 3
  */
 int logicalShift(int x, int n) {
-    return 2;
+    int a = 0x80000000;
+    a = a >> n << 1;
+    x = x >> n;
+    x = x & (~a);
+    return x;
 }
 
 /*
@@ -112,7 +173,29 @@ int logicalShift(int x, int n) {
  *   Difficulty: 4
  */
 int leftBitCount(int x) {
-    return 2;
+
+    // 0向右传播
+    x = x & (x >> 1);
+    x = x & (x >> 2);
+    x = x & (x >> 4);
+    x = x & (x >> 8);
+    x = x & (x >> 16);
+    // 高k位为 1，其余位全为 0
+
+    // 1 的个数
+    int m1 = 0x55555555;
+    int m2 = 0x33333333;
+    int m4 = 0x0F0F0F0F;
+    int m8 = 0x00FF00FF;
+    int m16 = 0x0000FFFF;
+
+    x = (x & m1) + ((x >> 1) & m1);
+    x = (x & m2) + ((x >> 2) & m2);
+    x = (x & m4) + ((x >> 4) & m4);
+    x = (x & m8) + ((x >> 8) & m8);
+    x = (x & m16) + ((x >> 16) & m16);
+
+    return x & 0x3F;
 }
 
 /*
@@ -124,7 +207,49 @@ int leftBitCount(int x) {
  *   Difficulty: 4
  */
 unsigned float_i2f(int x) {
-    return 2;
+    int sign = x & 0x80000000;
+    int exp = 158; // 31 + 127
+    int frac;
+    int round_part;
+
+    if (x == 0) 
+    {
+        return 0;
+    }
+
+    // 负数取反
+    if (sign) 
+    {
+        x = -x;
+    }
+
+    // 规格化，将最高位的 1 推到第 31 位
+    while ((x & 0x80000000) == 0) 
+    {
+        x = x << 1;
+        exp = exp - 1;
+    }
+
+    // 提取低 8 位以及尾数
+    round_part = x & 0x000000FF;
+    frac = (x >> 8) & 0x007FFFFF; // 提取纯粹的 23 位尾数
+
+    // 舍入判定
+    // 进位条件：> 0.5 或者 (== 0.5 且 保留位最低位为 1)
+    if (round_part > 0x00000080) 
+    {
+        frac = frac + 1;
+    }
+    else if (round_part == 0x00000080)
+    {
+        if (frac & 1)
+        {
+            frac = frac + 1;
+        }
+    }
+
+    // 组装
+    return sign + (exp << 23) + frac;
 }
 
 /*
@@ -139,7 +264,33 @@ unsigned float_i2f(int x) {
  *   Difficulty: 4
  */
 unsigned floatScale2(unsigned uf) {
-    return 2;
+    // 提符号位
+    unsigned S = uf & 0x80000000;
+    // 提阶码
+    unsigned E = (uf >> 23) & 0x000000FF;
+
+    // 非规格化值 且 NaN/Inf
+    if (E == 0xFF) 
+    {
+        return uf;
+    }
+
+    // 非规格化数 或 0：阶码全 0 (0x00)
+    if (E == 0x00) 
+    {
+        return S | (uf << 1);
+    }
+
+    // 规格化数：阶码加 1
+    E = E + 1;
+    // 阶码加 1 后可能变成 255，返回对应符号的无穷大
+    if (E == 0xFF) 
+    {
+        return S | 0x7F800000;
+    }
+
+    // 规格化数：组装
+    return (uf & 0x807FFFFF) | (E << 23);
 }
 
 /*
@@ -156,7 +307,54 @@ unsigned floatScale2(unsigned uf) {
  *   Difficulty: 3
  */
 int float64_f2i(unsigned uf1, unsigned uf2) {
-    return 2;
+    // uf2: 1 11 20  uf1: 32
+    int S = (uf2 >> 31) & 1; // 提符号位
+    int exp = ((uf2 >> 20) & 0x000007FF) - 1023; // 提阶码,减bias = 1023得exp
+    int frac_high = (uf2 & 0x000FFFFF) | 0x00100000; // 提取高 20 位尾数, 这里要补齐隐含位 1
+    int val = 0;
+
+    // 阶码<0 -> underflow -> 向零取整
+    if (exp < 0) 
+    {
+        return 0;
+    }
+
+    // 上溢：指数超出32位
+    if (exp > 31) 
+    {
+        return 0x80000000;
+    }
+
+    // 阶码，小数点移位
+    // frac_high 包含隐含位共 21 位
+    // 指数不足 20，小数点右移exp也不超出uf2右边，向0舍入，uf1 可全部忽略
+    if (exp <= 20) 
+    {
+        val = frac_high >> (20 - exp);
+    } 
+    else 
+    {
+        // 指数大于 20，小数点右移exp跨到uf1了，需要拼接低 32 位 uf1 的高位数据
+        // exp - 20 在 1 到 11 之间
+        int t = exp - 20;
+        val = (frac_high << t) | (uf1 >> (32 - t));
+    }
+
+    // 处理符号
+    if (S) 
+    {
+        val = -val;
+    } 
+    else 
+    {
+        // 正溢出
+        if (val < 0) 
+        {
+            return 0x80000000;
+        }
+    }
+
+    return val;
 }
 
 /*
@@ -173,5 +371,23 @@ int float64_f2i(unsigned uf1, unsigned uf2) {
  *   Difficulty: 4
  */
 unsigned floatPower2(int x) {
-    return 2;
+    // 1 8 23
+    // x > 127
+    if (x > 127) 
+    {
+        return 0x7F800000;
+    }
+
+    // -126 <= x <= 127
+    if (x >= -126) {
+        return (x + 127) << 23;
+    }
+
+    // -149 <= x < -126
+    if (x >= -149) {
+        return 1 << (x + 149);
+    }
+
+    // x < -149
+    return 0;
 }
