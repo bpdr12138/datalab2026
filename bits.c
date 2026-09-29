@@ -373,18 +373,20 @@ int float64_f2i(unsigned uf1, unsigned uf2) {
 unsigned floatPower2(int x) {
     // 1 8 23
     // x > 127
-    if (x > 127) 
+    if (x > 127) // 上溢
     {
         return 0x7F800000;
     }
 
     // -126 <= x <= 127
-    if (x >= -126) {
+    if (x >= -126) 
+    {
         return (x + 127) << 23;
     }
 
     // -149 <= x < -126
-    if (x >= -149) {
+    if (x >= -149) 
+    {
         return 1 << (x + 149);
     }
 
